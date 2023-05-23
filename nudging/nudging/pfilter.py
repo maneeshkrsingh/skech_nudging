@@ -331,3 +331,35 @@ class jittertemp_filter(base_filter):
         self.model.run(self.ensemble[i], self.ensemble[i])
         if self.verbose:
             PETSc.Sys.Print("assimilation step complete")
+
+
+# only implement nudging algorithm here
+class nudging_filter(base_filter):
+
+    def lambda_functional(self):
+        for steps in self.nsteps:
+            lambda_func += self.dt*self.model.dW1**2+self.model.dW2**2+self.model.dW3**2+self.model.dW4**2
+        return lambda_func
+    
+    def nudge_step(self, y, log_likelihood):
+        N = self.nensemble[self.ensemble_rank]
+        for i in range(N):
+            # run and obs the model
+            self.model.run(self.ensemble[i],self.new_ensemble[i])
+            Y = self.model.obs()
+            # set the control
+            self.m = self.model.controls()
+            # add the likelihood and Girsanov factor
+            self.weight_J_fn = assemble(log_likelihood(y,Y))+self.lambda_functional()
+            self.Jhat = ReducedFunctional(self.weight_J_fn, self.m)
+
+            lambda_opt = minimize(self.Jhat)
+
+            # solve run method with both lambda_opt and noise terms
+            self.model.run(self.ensemble[i], self.ensemble[i])   
+            
+            # calculate modified weight
+            self.weight_arr.dlocal[i] = self.weight_J_fn
+
+        #resampling method
+        self.parallel_resample()

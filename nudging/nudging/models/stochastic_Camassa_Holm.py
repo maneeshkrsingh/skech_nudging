@@ -61,12 +61,14 @@ class Camsholm(base_model):
 
         # with added term
         self.R = FunctionSpace(self.mesh, "R", 0)
-        self.dW = []
-        for i in range(self.nsteps):
-            subdW = []
-            for j in range(4):
-                subdW.append(Function(self.R))
-            self.dW.append(subdW)
+        # self.dW = []
+        # for i in range(self.nsteps):
+        #     subdW = []
+        #     for j in range(4):
+        #         subdW.append(Function(self.R))
+        #     self.dW.append(subdW)
+
+
 
         self.dW1 = Function(self.R)
         self.dW2 = Function(self.R)
