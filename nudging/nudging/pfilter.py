@@ -336,29 +336,31 @@ class jittertemp_filter(base_filter):
 # only implement nudging algorithm here
 class nudging_filter(base_filter):
 
-    def lambda_functional(self):
-        for steps in self.nsteps:
-            lambda_func += self.dt*self.model.dW1**2+self.model.dW2**2+self.model.dW3**2+self.model.dW4**2
-        return lambda_func
+    
     
     def nudge_step(self, y, log_likelihood):
         N = self.nensemble[self.ensemble_rank]
         for i in range(N):
-            # run and obs the model
+            pyadjoint.tape.continue_annotation()
+            # run and obs the model without noise
             self.model.run(self.ensemble[i],self.new_ensemble[i])
             Y = self.model.obs()
             # set the control
             self.m = self.model.controls()
-            # add the likelihood and Girsanov factor
-            self.weight_J_fn = assemble(log_likelihood(y,Y))+self.lambda_functional()
-            self.Jhat = ReducedFunctional(self.weight_J_fn, self.m)
+            # add the likelihood and Girsanov factor 
+            self.weight_J_fn = assemble(log_likelihood(y,Y))+self.model.lambda_functional()
 
+            self.Jhat = ReducedFunctional(self.weight_J_fn, self.m)
+            pyadjoint.tape.pause_annotation()
+
+            #minimize all lambda_k
             lambda_opt = minimize(self.Jhat)
 
             # solve run method with both lambda_opt and noise terms
-            self.model.run(self.ensemble[i], self.ensemble[i])   
+            self.model.run(self.ensemble[i], self.ensemble[i])    # need modification 
             
-            # calculate modified weight
+            # calculate modified weight 
+            # need second and third term as real numebers
             self.weight_arr.dlocal[i] = self.weight_J_fn
 
         #resampling method

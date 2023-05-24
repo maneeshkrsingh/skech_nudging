@@ -35,6 +35,13 @@ class base_model(object, metaclass=ABCMeta):
         obs - a numpy array of the observations from current model state
         """
         pass
+
+    @abstractmethod
+    def lambda_functional(self):
+        """
+        assemble Girsonov factor 
+        """
+        pass
     
 
     @abstractmethod

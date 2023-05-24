@@ -127,7 +127,7 @@ class Camsholm(base_model):
         
     def controls(self):
         controls_list = []
-        for i in range(len(self.X)):
+        for i in range(1,len(self.X)):
             controls_list.append(Control(self.X[i]))
         return controls_list
         
@@ -157,3 +157,13 @@ class Camsholm(base_model):
                 X[count].assign(c1*X[count] + c2*rg.normal(self.R, 0., 1.0))
                 if g:
                     X[count] += gscale*g[count]
+
+
+    def lambda_functional(self):
+        for steps in self.nsteps: 
+            if steps == 0:
+               lambda_func = 0.5*(self.model.dW1**2+self.model.dW2**2+self.model.dW3**2+self.model.dW4**2) # sort out dt
+            else:
+                lambda_func += 0.5*(self.model.dW1**2+self.model.dW2**2+self.model.dW3**2+self.model.dW4**2) # sort out dt
+            #lambda_func_2 += (self.model.dW1**2+self.model.dW2**2+self.model.dW3**2+self.model.dW4**2)
+        return assemble(lambda_func)/40
