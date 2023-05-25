@@ -356,7 +356,14 @@ class nudging_filter(base_filter):
             #minimize all lambda_k
             lambda_opt = minimize(self.Jhat)
 
-            # solve run method with both lambda_opt and noise terms
+            # implement correctly
+            for j in range(4):
+                self.ensemble[i][j].assign(lambda_opt)
+
+            
+            # radomize with both lambda_opt and noise terms
+            self.model.randomize(self.ensemble[i],Constant(1),Constant(1))
+            # run method
             self.model.run(self.ensemble[i], self.ensemble[i])    # need modification 
             
             # calculate modified weight 

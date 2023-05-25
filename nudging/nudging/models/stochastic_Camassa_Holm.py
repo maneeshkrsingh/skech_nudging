@@ -165,5 +165,4 @@ class Camsholm(base_model):
                lambda_func = 0.5*(self.model.dW1**2+self.model.dW2**2+self.model.dW3**2+self.model.dW4**2) # sort out dt
             else:
                 lambda_func += 0.5*(self.model.dW1**2+self.model.dW2**2+self.model.dW3**2+self.model.dW4**2) # sort out dt
-            #lambda_func_2 += (self.model.dW1**2+self.model.dW2**2+self.model.dW3**2+self.model.dW4**2)
         return assemble(lambda_func)/40
