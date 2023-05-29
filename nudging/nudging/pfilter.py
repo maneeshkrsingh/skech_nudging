@@ -335,10 +335,8 @@ class jittertemp_filter(base_filter):
 
 # only implement nudging algorithm here
 class nudging_filter(base_filter):
-
     
-    
-    def nudge_step(self, y, log_likelihood):
+    def assimilation_step(self, y, log_likelihood):
         N = self.nensemble[self.ensemble_rank]
         for i in range(N):
             pyadjoint.tape.continue_annotation()
@@ -360,14 +358,12 @@ class nudging_filter(base_filter):
             for j in range(4):
                 self.ensemble[i][j].assign(lambda_opt)
 
-            
             # radomize with both lambda_opt and noise terms
             self.model.randomize(self.ensemble[i],Constant(1),Constant(1))
             # run method
             self.model.run(self.ensemble[i], self.ensemble[i])    # need modification 
             
             # calculate modified weight 
-            # need second and third term as real numebers
             self.weight_arr.dlocal[i] = self.weight_J_fn
 
         #resampling method

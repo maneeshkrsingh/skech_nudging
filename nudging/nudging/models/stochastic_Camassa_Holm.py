@@ -160,9 +160,9 @@ class Camsholm(base_model):
 
 
     def lambda_functional(self):
-        for steps in self.nsteps: 
-            if steps == 0:
-               lambda_func = 0.5*(self.model.dW1**2+self.model.dW2**2+self.model.dW3**2+self.model.dW4**2) # sort out dt
+        for step in range(self.nsteps):
+            if step == 0:
+               lambda_func = 0.5*(self.dW1**2+self.dW2**2+self.dW3**2+self.dW4**2) # sort out dt
             else:
-                lambda_func += 0.5*(self.model.dW1**2+self.model.dW2**2+self.model.dW3**2+self.model.dW4**2) # sort out dt
+                lambda_func += 0.5*(self.dW1**2+self.dW2**2+self.dW3**2+self.dW4**2) # sort out dt
         return assemble(lambda_func)/40
