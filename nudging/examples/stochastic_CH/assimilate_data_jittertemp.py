@@ -16,10 +16,13 @@ xpoints = 40
 model = Camsholm(100, nsteps, xpoints)
 MALA = True
 verbose = True
-jtfilter = jittertemp_filter(n_temp=4, n_jitt = 4, rho= 0.99,
-                             verbose=verbose, MALA=MALA)
+
+# jtfilter = jittertemp_filter(n_temp=4, n_jitt = 4, rho= 0.99,
+#                              verbose=verbose, MALA=MALA)
 
 #jtfilter = bootstrap_filter()
+
+jtfilter = nudging_filter()
 
 nensemble = [5,5,5,5]
 jtfilter.setup(nensemble, model)
