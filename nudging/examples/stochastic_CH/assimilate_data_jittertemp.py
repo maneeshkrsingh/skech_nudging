@@ -55,23 +55,18 @@ yVOM = Function(model.VVOM)
 
 # prepare shared arrays for data
 y_e_list = []
-#y_e_asmfwd_list = []
 y_sim_obs_list = []
 for m in range(y.shape[1]):        
     y_e_shared = SharedArray(partition=nensemble, 
                                   comm=jtfilter.subcommunicators.ensemble_comm)
-    # y_e_asmfwd_shared = SharedArray(partition=nensemble, 
-    #                              comm=jtfilter.subcommunicators.ensemble_comm)
     y_sim_obs_shared = SharedArray(partition=nensemble, 
                                  comm=jtfilter.subcommunicators.ensemble_comm)
     y_e_list.append(y_e_shared)
-    #y_e_asmfwd_list.append(y_e_asmfwd_shared)
     y_sim_obs_list.append(y_sim_obs_shared)
 
 ys = y.shape
 if COMM_WORLD.rank == 0:
     y_e = np.zeros((np.sum(nensemble), ys[0], ys[1]))
-    y_e_asmfwd = np.zeros((np.sum(nensemble), ys[0], ys[1]))
     y_sim_obs_alltime_step = np.zeros((np.sum(nensemble),nsteps,  ys[1]))
     y_sim_obs_allobs_step = np.zeros((np.sum(nensemble),nsteps*N_obs,  ys[1]))
     #print(np.shape(y_sim_obs_allobs_step))
@@ -93,10 +88,19 @@ for k in range(N_obs):
     yVOM.dat.data[:] = y[k, :]
 
 
+    # make a copy so that we don't overwrite the initial condition
+    # in the next step
+    for i in  range(nensemble[jtfilter.ensemble_rank]):
+        for p in range(len(jtfilter.new_ensemble[i])):
+            jtfilter.new_ensemble[i][p].assign(jtfilter.ensemble[i][p])
+        model.randomize(jtfilter.new_ensemble[i])
+
+    # Compute simulated observations using "prior" distribution
+    # i.e. before we have used the observed data
     for step in range(nsteps):
         for i in  range(nensemble[jtfilter.ensemble_rank]):
-            #model.randomize(jtfilter.ensemble[i])
-            model.run(jtfilter.ensemble[i], jtfilter.ensemble[i])
+            model.run(jtfilter.new_ensemble[i], jtfilter.new_ensemble[i])
+            # note, not safe in spatial parallel
             fwd_simdata = model.obs().dat.data[:]
             for m in range(y.shape[1]):
                 y_sim_obs_list[m].dlocal[i] = fwd_simdata[m]
@@ -122,10 +126,8 @@ for k in range(N_obs):
 
     for m in range(y.shape[1]):
         y_e_list[m].synchronise()
-        #y_e_asmfwd_list[m].synchronise()
         if COMM_WORLD.rank == 0:
             y_e[:, k, m] = y_e_list[m].data()
-            #y_e_asmfwd [:, k, m] = y_e_asmfwd_list[m].data()
 
 if COMM_WORLD.rank == 0:
     print("Time shape", y_sim_obs_alltime_step.shape)

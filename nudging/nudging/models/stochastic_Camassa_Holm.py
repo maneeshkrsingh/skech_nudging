@@ -76,11 +76,11 @@ class Camsholm(base_model):
         self.dW4 = Function(self.R)
         self.Ln = self.fx1*self.dW1+self.fx2*self.dW2+self.fx3*self.dW3+self.fx4*self.dW4
         
+        self.sqrt_dt = self.dt**0.5
         # finite element linear functional 
-        Dt = Constant(self.dt)
         self.mh = 0.5*(self.m1 + self.m0)
         self.uh = 0.5*(self.u1 + self.u0)
-        self.v = self.uh*Dt+self.Ln*Dt**0.5
+        self.v = self.uh*self.dt+self.Ln*self.dt**0.5
 
         self.L = ((self.q*self.u1 + alphasq*self.q.dx(0)*self.u1.dx(0) - self.q*self.m1)*dx +(self.p*(self.m1-self.m0) + (self.p*self.v.dx(0)*self.mh -self.p.dx(0)*self.v*self.mh))*dx)
 
@@ -113,6 +113,7 @@ class Camsholm(base_model):
         self.w0.assign(self.X[0])
         self.msolve.solve()
         for step in range(self.nsteps):
+            #Fixing sqrt(dt) term
             self.dW1.assign(self.X[4*step+1])
             self.dW2.assign(self.X[4*step+2])
             self.dW3.assign(self.X[4*step+3])
@@ -154,7 +155,7 @@ class Camsholm(base_model):
         for i in range(self.nsteps):
             for j in range(4):
                 count += 1
-                X[count].assign(c1*X[count] + c2*rg.normal(self.R, 0., 1.0))
+                X[count].assign(c1*self.sqrt_dt*X[count] + c2*rg.normal(self.R, 0., 1.0))
                 if g:
                     X[count] += gscale*g[count]
 
@@ -162,7 +163,7 @@ class Camsholm(base_model):
     def lambda_functional(self):
         for step in range(self.nsteps):
             if step == 0:
-               lambda_func = 0.5*(self.dW1**2+self.dW2**2+self.dW3**2+self.dW4**2) # sort out dt
+               lambda_func = 0.5*self.dt*(self.dW1**2+self.dW2**2+self.dW3**2+self.dW4**2)*dx # sort out dt
             else:
-                lambda_func += 0.5*(self.dW1**2+self.dW2**2+self.dW3**2+self.dW4**2) # sort out dt
+                lambda_func += 0.5*self.dt*(self.dW1**2+self.dW2**2+self.dW3**2+self.dW4**2)*dx # sort out dt
         return assemble(lambda_func)/40

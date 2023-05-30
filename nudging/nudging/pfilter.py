@@ -344,19 +344,19 @@ class nudging_filter(base_filter):
             self.model.run(self.ensemble[i],self.new_ensemble[i])
             Y = self.model.obs()
             # set the control
-            self.m = self.model.controls()
+            self.lmbda = self.model.controls()
             # add the likelihood and Girsanov factor 
             self.weight_J_fn = assemble(log_likelihood(y,Y))+self.model.lambda_functional()
 
-            self.Jhat = ReducedFunctional(self.weight_J_fn, self.m)
+            self.J_fnhat = ReducedFunctional(self.weight_J_fn, self.lmbda)
             pyadjoint.tape.pause_annotation()
 
             #minimize all lambda_k
-            lambda_opt = minimize(self.Jhat)
+            lambda_opt = minimize(self.J_fnhat)
 
             # implement correctly
-            for j in range(4):
-                self.ensemble[i][j].assign(lambda_opt)
+            # for j in range(4):
+            #     self.ensemble[i][j].assign(lambda_opt)
 
             # radomize with both lambda_opt and noise terms
             self.model.randomize(self.ensemble[i],Constant(1),Constant(1))
@@ -365,6 +365,6 @@ class nudging_filter(base_filter):
             
             # calculate modified weight 
             self.weight_arr.dlocal[i] = self.weight_J_fn
-
+        print(type(lambda_opt))
         #resampling method
         self.parallel_resample()
