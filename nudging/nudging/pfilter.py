@@ -335,8 +335,12 @@ class jittertemp_filter(base_filter):
 
 # only implement nudging algorithm here
 class nudging_filter(base_filter):
+
+    def __init__(self):
+        super().__init__()
     
     def assimilation_step(self, y, log_likelihood):
+
         N = self.nensemble[self.ensemble_rank]
         for i in range(N):
             pyadjoint.tape.continue_annotation()
@@ -349,26 +353,36 @@ class nudging_filter(base_filter):
             self.weight_J_fn = assemble(log_likelihood(y,Y))+self.model.lambda_functional_1()
 
             self.J_fnhat = ReducedFunctional(self.weight_J_fn, self.lmbda)
+
             pyadjoint.tape.pause_annotation()
 
             #minimize all lambda_k
-            lambda_opt = minimize(self.J_fnhat, options={"disp": True} )
+            #lambda_opt = minimize(self.J_fnhat, options={"disp": True})
+            lambda_opt = minimize(self.J_fnhat)
 
             #print(type(lambda_opt[0]), type(self.ensemble[i][0]))
-            for j in range(4*5):
+
+            # update  lambda_opt in the ensemble members
+            for j in range(4*self.model.nsteps):
                 self.ensemble[i][j+1].assign(lambda_opt[j])
 
+            # Add first Girsanov factor 
             self.weight_arr.dlocal[i] = self.model.lambda_functional_1()
 
-            # radomize with both lambda_opt and noise terms
+            # radomize ensemble with noise terms
             self.model.randomize(self.ensemble[i],Constant(0),Constant(1))
+
+            # Add second Girsanov factor using lambda_opt and noise
             self.weight_arr.dlocal[i] += self.model.lambda_functional_2(lambda_opt)
-            for j in range(4*5):
+
+            for j in range(4*self.model.nsteps):
                 self.ensemble[i][j+1].assign(lambda_opt[j])
-            # run method
-            self.model.run(self.ensemble[i], self.ensemble[i])    # need modification 
+
+            # run and obs method with updated noise and lambda_opt
+            self.model.run(self.ensemble[i], self.ensemble[i])    
             Y = self.model.obs()
-            # calculate modified weight 
+
+            # Add liklihood function to calculate the modified weights 
             self.weight_arr.dlocal[i] += assemble(log_likelihood(y,Y))
         
         #resampling method

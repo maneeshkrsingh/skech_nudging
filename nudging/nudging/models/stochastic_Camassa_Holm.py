@@ -163,34 +163,34 @@ class Camsholm(base_model):
     def lambda_functional_1(self):
         for step in range(self.nsteps):
 
-            self.dW1.assign(self.X[4*step+1])
-            self.dW2.assign(self.X[4*step+2])
-            self.dW3.assign(self.X[4*step+3])
-            self.dW4.assign(self.X[4*step+4])
+            dW1 = self.X[4*step+1]
+            dW2 = self.X[4*step+2]
+            dW3 = self.X[4*step+3]
+            dW4 = self.X[4*step+4]
 
             if step == 0:
-               lambda_func = 0.5*(self.dW1**2+self.dW2**2+self.dW3**2+self.dW4**2)*dx
+               lambda_func = 0.5*(dW1**2+dW2**2+dW3**2+dW4**2)*dx
             else:
-                lambda_func += 0.5*(self.dW1**2+self.dW2**2+self.dW3**2+self.dW4**2)*dx
+                lambda_func += 0.5*(dW1**2+dW2**2+dW3**2+dW4**2)*dx
         return assemble(lambda_func)/40
     
 
     def lambda_functional_2(self, lambda_opt):
         for step in range(self.nsteps):
 
-            self.dW1.assign(self.X[4*step+1])
-            self.dW2.assign(self.X[4*step+2])
-            self.dW3.assign(self.X[4*step+3])
-            self.dW4.assign(self.X[4*step+4])
+            dW1 = self.X[4*step+1]
+            dW2 = self.X[4*step+2]
+            dW3 = self.X[4*step+3]
+            dW4 = self.X[4*step+4]
 
-            dl1= lambda_opt[4*step]
-            dl2=lambda_opt[4*step+1]
-            dl3=lambda_opt[4*step+2]
-            dl4=lambda_opt[4*step+3]
+            dl1 = lambda_opt[4*step]
+            dl2 = lambda_opt[4*step+1]
+            dl3 = lambda_opt[4*step+2]
+            dl4 = lambda_opt[4*step+3]
 
             if step == 0:
-               lambda_func = -(self.dW1*dl1+self.dW2*dl2+self.dW3*dl3+self.dW4*dl4)*dx # sort out dt
+               lambda_func = -(dW1*dl1+dW2*dl2+dW3*dl3+dW4*dl4)*dx # sort out dt
             else:
-                lambda_func -= (self.dW1*dl1+self.dW2*dl2+self.dW3*dl3+self.dW4*dl4)*dx # sort out dt
+                lambda_func -= (dW1*dl1+dW2*dl2+dW3*dl3+dW4*dl4)*dx # sort out dt
 
         return assemble(lambda_func)/40
