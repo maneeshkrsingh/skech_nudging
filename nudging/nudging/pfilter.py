@@ -341,30 +341,34 @@ class nudging_filter(base_filter):
         for i in range(N):
             pyadjoint.tape.continue_annotation()
             # run and obs the model without noise
-            self.model.run(self.ensemble[i],self.new_ensemble[i])
+            self.model.run(self.ensemble[i],self.ensemble[i])
             Y = self.model.obs()
             # set the control
             self.lmbda = self.model.controls()
             # add the likelihood and Girsanov factor 
-            self.weight_J_fn = assemble(log_likelihood(y,Y))+self.model.lambda_functional()
+            self.weight_J_fn = assemble(log_likelihood(y,Y))+self.model.lambda_functional_1()
 
             self.J_fnhat = ReducedFunctional(self.weight_J_fn, self.lmbda)
             pyadjoint.tape.pause_annotation()
 
             #minimize all lambda_k
             lambda_opt = minimize(self.J_fnhat)
+            print(type(lambda_opt[0]), type(self.ensemble[i][0]))
+            for j in range(4*5):
+                self.ensemble[i][j+1].assign(lambda_opt[j])
 
-            # implement correctly
-            # for j in range(4):
-            #     self.ensemble[i][j].assign(lambda_opt)
+            self.weight_arr.dlocal[i] = self.model.lambda_functional_1()
 
             # radomize with both lambda_opt and noise terms
-            self.model.randomize(self.ensemble[i],Constant(1),Constant(1))
+            self.model.randomize(self.ensemble[i],Constant(0),Constant(1))
+            self.weight_arr.dlocal[i] += self.model.lambda_functional_2(lambda_opt)
+            for j in range(4*5):
+                self.ensemble[i][j+1].assign(lambda_opt[j])
             # run method
             self.model.run(self.ensemble[i], self.ensemble[i])    # need modification 
-            
+            Y = self.model.obs()
             # calculate modified weight 
-            self.weight_arr.dlocal[i] = self.weight_J_fn
-        print(type(lambda_opt))
+            self.weight_arr.dlocal[i] += assemble(log_likelihood(y,Y))
+        
         #resampling method
         self.parallel_resample()

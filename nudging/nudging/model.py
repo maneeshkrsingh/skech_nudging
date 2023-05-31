@@ -37,7 +37,15 @@ class base_model(object, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def lambda_functional(self):
+    def lambda_functional_1(self):
+        """
+        assemble Girsanov factor 
+        """
+        pass
+
+
+    @abstractmethod
+    def lambda_functional_2(self):
         """
         assemble Girsanov factor 
         """

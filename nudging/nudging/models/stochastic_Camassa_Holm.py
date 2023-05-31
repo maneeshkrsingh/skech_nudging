@@ -155,15 +155,42 @@ class Camsholm(base_model):
         for i in range(self.nsteps):
             for j in range(4):
                 count += 1
-                X[count].assign(c1*self.sqrt_dt*X[count] + c2*rg.normal(self.R, 0., 1.0))
+                X[count].assign(c1*X[count] + c2*rg.normal(self.R, 0., 1.0))
                 if g:
                     X[count] += gscale*g[count]
 
 
-    def lambda_functional(self):
+    def lambda_functional_1(self):
         for step in range(self.nsteps):
+
+            self.dW1.assign(self.X[4*step+1])
+            self.dW2.assign(self.X[4*step+2])
+            self.dW3.assign(self.X[4*step+3])
+            self.dW4.assign(self.X[4*step+4])
+
             if step == 0:
-               lambda_func = 0.5*self.dt*(self.dW1**2+self.dW2**2+self.dW3**2+self.dW4**2)*dx # sort out dt
+               lambda_func = 0.5*(self.dW1**2+self.dW2**2+self.dW3**2+self.dW4**2)*dx
             else:
-                lambda_func += 0.5*self.dt*(self.dW1**2+self.dW2**2+self.dW3**2+self.dW4**2)*dx # sort out dt
+                lambda_func += 0.5*(self.dW1**2+self.dW2**2+self.dW3**2+self.dW4**2)*dx
+        return assemble(lambda_func)/40
+    
+
+    def lambda_functional_2(self, lambda_opt):
+        for step in range(self.nsteps):
+
+            self.dW1.assign(self.X[4*step+1])
+            self.dW2.assign(self.X[4*step+2])
+            self.dW3.assign(self.X[4*step+3])
+            self.dW4.assign(self.X[4*step+4])
+
+            dl1= lambda_opt[4*step]
+            dl2=lambda_opt[4*step+1]
+            dl3=lambda_opt[4*step+2]
+            dl4=lambda_opt[4*step+3]
+
+            if step == 0:
+               lambda_func = -(self.dW1*dl1+self.dW2*dl2+self.dW3*dl3+self.dW4*dl4)*dx # sort out dt
+            else:
+                lambda_func -= (self.dW1*dl1+self.dW2*dl2+self.dW3*dl3+self.dW4*dl4)*dx # sort out dt
+
         return assemble(lambda_func)/40
