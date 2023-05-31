@@ -39,7 +39,7 @@ class base_model(object, metaclass=ABCMeta):
     @abstractmethod
     def lambda_functional_1(self):
         """
-        assemble Girsanov factor 
+        assemble first Girsanov factor 
         """
         pass
 
@@ -47,7 +47,7 @@ class base_model(object, metaclass=ABCMeta):
     @abstractmethod
     def lambda_functional_2(self):
         """
-        assemble Girsanov factor 
+        assemble second Girsanov factor 
         """
         pass
     
