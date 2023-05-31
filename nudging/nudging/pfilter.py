@@ -352,8 +352,9 @@ class nudging_filter(base_filter):
             pyadjoint.tape.pause_annotation()
 
             #minimize all lambda_k
-            lambda_opt = minimize(self.J_fnhat)
-            print(type(lambda_opt[0]), type(self.ensemble[i][0]))
+            lambda_opt = minimize(self.J_fnhat, options={"disp": True} )
+
+            #print(type(lambda_opt[0]), type(self.ensemble[i][0]))
             for j in range(4*5):
                 self.ensemble[i][j+1].assign(lambda_opt[j])
 
