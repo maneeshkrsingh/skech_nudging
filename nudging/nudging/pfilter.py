@@ -351,7 +351,7 @@ class nudging_filter(base_filter):
             self.lmbda = self.model.controls()
             # add the likelihood and Girsanov factor 
             self.weight_J_fn = assemble(log_likelihood(y,Y))+self.model.lambda_functional_1()
-            lmbda_indices = range(len(self.lmbda))
+            lmbda_indices = tuple(i  for i in range(len(self.lmbda)))
             
             self.J_fnhat = ReducedFunctional(self.weight_J_fn, self.lmbda, derivative_components= lmbda_indices)
             
@@ -385,6 +385,5 @@ class nudging_filter(base_filter):
 
             # Add liklihood function to calculate the modified weights 
             self.weight_arr.dlocal[i] += assemble(log_likelihood(y,Y))
-        print(type(self.J_fnhat))
         #resampling method
         self.parallel_resample()
