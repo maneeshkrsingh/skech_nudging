@@ -84,6 +84,7 @@ class base_filter(object, metaclass=ABCMeta):
             weights = np.exp(-dtheta*weights)
             weights /= np.sum(weights)
             self.ess = 1/np.sum(weights**2)
+            print('Ess: ', self.ess)
 
         # compute resampling protocol on rank 0
         if self.ensemble_rank == 0:
@@ -344,11 +345,17 @@ class nudging_filter(base_filter):
         N = self.nensemble[self.ensemble_rank]
         for i in range(N):
             pyadjoint.tape.continue_annotation()
+            print('insidenudge')
             # run and obs the model without noise
             self.model.run(self.ensemble[i],self.ensemble[i])
+            print(len(self.ensemble[i]))
             Y = self.model.obs()
             # set the control
-            self.lmbda = self.model.controls()
+            self.lmbda = self.model.controls()+ [y]
+            print(len(self.lmbda))
+
+
+
             # add the likelihood and Girsanov factor 
             self.weight_J_fn = assemble(log_likelihood(y,Y))+self.model.lambda_functional_1()
             lmbda_indices = tuple(i  for i in range(len(self.lmbda)))
@@ -357,16 +364,30 @@ class nudging_filter(base_filter):
             
             pyadjoint.tape.pause_annotation()
 
+            for j in range(4*self.model.nsteps):
+                self.ensemble[i][j].assign(0)
+
+            valuebeforemin = self.J_fnhat(self.ensemble[i]+[y])
+
             #minimize all lambda_k
             #lambda_opt = minimize(self.J_fnhat, options={"disp": True})
             lambda_opt = minimize(self.J_fnhat)
+
+
+            
+
+
 
             #print(type(lambda_opt[0]), type(self.ensemble[i][0]))
 
             # update  lambda_opt in the ensemble members
             for j in range(4*self.model.nsteps):
-                self.ensemble[i][j+1].assign(lambda_opt[j])
+                self.ensemble[i][j].assign(lambda_opt[j])
 
+
+            valueafteremin = self.J_fnhat(self.ensemble[i]+[Control(y)])
+
+            print(i, valuebeforemin, valueafteremin, 'ensemblemember', 'before', 'after')
             # Add first Girsanov factor 
             self.weight_arr.dlocal[i] = self.model.lambda_functional_1()
 
@@ -377,13 +398,14 @@ class nudging_filter(base_filter):
             self.weight_arr.dlocal[i] += self.model.lambda_functional_2(lambda_opt)
 
             for j in range(4*self.model.nsteps):
-                self.ensemble[i][j+1].assign(lambda_opt[j])
+                self.ensemble[i][j].assign(lambda_opt[j])
 
             # run and obs method with updated noise and lambda_opt
             self.model.run(self.ensemble[i], self.ensemble[i])    
             Y = self.model.obs()
-
+            
             # Add liklihood function to calculate the modified weights 
             self.weight_arr.dlocal[i] += assemble(log_likelihood(y,Y))
+            print('outofnudge')
         #resampling method
         self.parallel_resample()
