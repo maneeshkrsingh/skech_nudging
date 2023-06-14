@@ -128,7 +128,7 @@ class Camsholm(base_model):
         
     def controls(self):
         controls_list = []
-        for i in range(1,len(self.X)):
+        for i in range(len(self.X)):
             controls_list.append(Control(self.X[i]))
         return controls_list
         
@@ -183,10 +183,10 @@ class Camsholm(base_model):
             dW3 = self.X[4*step+3]
             dW4 = self.X[4*step+4]
 
-            dl1 = lambda_opt[4*step]
-            dl2 = lambda_opt[4*step+1]
-            dl3 = lambda_opt[4*step+2]
-            dl4 = lambda_opt[4*step+3]
+            dl1 = lambda_opt[4*step+1]
+            dl2 = lambda_opt[4*step+2]
+            dl3 = lambda_opt[4*step+3]
+            dl4 = lambda_opt[4*step+4]
 
             if step == 0:
                lambda_func = -(dW1*dl1+dW2*dl2+dW3*dl3+dW4*dl4)*dx # sort out dt
