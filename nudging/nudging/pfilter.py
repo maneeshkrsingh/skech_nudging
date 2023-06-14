@@ -351,7 +351,7 @@ class nudging_filter(base_filter):
             print(len(self.ensemble[i]))
             Y = self.model.obs()
             # set the control
-            self.lmbda = self.model.controls()+ [y]
+            self.lmbda = self.model.controls()+ [Control(y)]
             print(len(self.lmbda))
 
 
@@ -361,6 +361,8 @@ class nudging_filter(base_filter):
             lmbda_indices = tuple(i  for i in range(len(self.lmbda)))
             
             self.J_fnhat = ReducedFunctional(self.weight_J_fn, self.lmbda, derivative_components= lmbda_indices)
+
+            #self.J_fnhat = ReducedFunctional(self.weight_J_fn, self.lmbda)
             
             pyadjoint.tape.pause_annotation()
 
@@ -385,7 +387,7 @@ class nudging_filter(base_filter):
                 self.ensemble[i][j].assign(lambda_opt[j])
 
 
-            valueafteremin = self.J_fnhat(self.ensemble[i]+[Control(y)])
+            valueafteremin = self.J_fnhat(self.ensemble[i]+[y])
 
             print(i, valuebeforemin, valueafteremin, 'ensemblemember', 'before', 'after')
             # Add first Girsanov factor 
