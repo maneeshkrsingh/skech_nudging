@@ -177,24 +177,24 @@ class Euler_SD(base_model):
     def lambda_functional_1(self):
         
         for step in range(self.nsteps):
-            self.dWi.assign(self.X[step+1])
+            self.dXi.assign(self.X[step+1])
 
             if step == 0:
-                lambda_func = 0.5*dot(self.dWi, self.dWi)*dx
+                lambda_func = 0.5*dot(self.dXi, self.dXi)*dx
             else:
-                lambda_func += 0.5*dot(self.dWi, self.dWi)*dx
-        return assemble(lambda_func)/assemble(1 * dx(domain=mesh))
+                lambda_func += 0.5*dot(self.dXi, self.dXi)*dx
+        return assemble(lambda_func)/assemble(1 * dx(self.mesh))
     
 
     def lambda_functional_2(self, lambda_opt):
         for step in range(self.nsteps):
-            self.dWi.assign(self.X[step+1])
-            self.dLi.assign(lambda_opt[step+1])
+            self.dXi.assign(self.X[step+1])
+            #dLi.assign(lambda_opt[step+1])
 
             if step == 0:
-                lambda_func = 0.5*dot(self.dLi, self.dWi)*dx
+                lambda_func = 0.5*dot(self.dXi, self.dXi)*dx
             else:
-                lambda_func += 0.5*dot(self.dLi, self.dWi)*dx
-        return assemble(lambda_func)/assemble(1 * dx(domain=mesh))
+                lambda_func -= 0.5*dot(self.dXi, self.dXi)*dx
+        return assemble(lambda_func)/assemble(1 * dx(self.mesh))
 
                
