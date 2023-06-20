@@ -439,30 +439,12 @@ class nudging_filter(base_filter):
             
             # Add liklihood function to calculate the modified weights 
             self.weight_arr.dlocal[i] += assemble(log_likelihood(y,Y))
-        #     self.weight_arr.synchronise(root=0)
-        # if self.ensemble_rank == 0:
-        #     weights = self.weight_arr.data()
-        #     # renormalise
-        #     weights = np.exp(-weights)
-        #     weights /= np.sum(weights)
-        #     PETSc.Sys.Print('Nudge_W:', weights)
-        #     self.ess = 1/np.sum(weights**2)
-        #     PETSc.Sys.Print('Nudge_ess:', self.ess)
-            #print('outofnudge')
+  
 
         # tempering with jittering
         theta = .0
         while theta <1.: #  Tempering loop
             dtheta = 1.0 - theta
-            # forward model step
-            for i in range(N):
-                # generate the initial noise variables
-                self.model.randomize(self.ensemble[i])
-                # put result of forward model into new_ensemble
-                self.model.run(self.ensemble[i], self.new_ensemble[i])
-                Y = self.model.obs()
-                self.weight_arr.dlocal[i] = assemble(log_likelihood(y,Y))
-
             # adaptive dtheta choice
             dtheta = self.adaptive_dtheta(dtheta, theta,  ess_tol)
             theta += dtheta
