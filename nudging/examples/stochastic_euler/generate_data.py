@@ -14,7 +14,7 @@ run model, get true value and obseravation and use paraview for viewing
 add observation noise N(0, sigma^2) 
 """
 #np.random.seed(138)
-n = 8
+n = 4
 nsteps = 5
 model = Euler_SD(n, nsteps=nsteps)
 model.setup()

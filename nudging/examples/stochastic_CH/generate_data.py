@@ -5,7 +5,7 @@ from pyop2.mpi import MPI
 from nudging import *
 import numpy as np
 from nudging.models.stochastic_Camassa_Holm import Camsholm
-
+#from nudging.models.stochastic_Camassa_Holm_e import Camsholm1 as Camsholm
 """
 create some synthetic data/observation data at T_1 ---- T_Nobs
 Pick initial conditon
@@ -21,7 +21,7 @@ _, u0 = X_truth[0].split()
 x, = SpatialCoordinate(model.mesh)
 u0.interpolate(0.2*2/(exp(x-403./15.) + exp(-x+403./15.)) + 0.5*2/(exp(x-203./15.)+exp(-x+203./15.)))
 
-N_obs = 5
+N_obs = 10
 
 y_true = model.obs().dat.data[:]
 y_obs_full = np.zeros((N_obs, np.size(y_true)))

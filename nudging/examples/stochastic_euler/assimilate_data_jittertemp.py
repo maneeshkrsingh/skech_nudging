@@ -16,22 +16,26 @@ from nudging.models.stochastic_euler import Euler_SD
     Do assimilation step for tempering and jittering steps 
 """
 
-n = 8
+n = 4
 nsteps = 5
 model = Euler_SD(n, nsteps=nsteps)
 
-MALA = True
+MALA = False
 verbose = True
-jtfilter = jittertemp_filter(n_temp=4, n_jitt = 4, rho= 0.99,
-                            verbose=verbose, MALA=MALA)
+
 
 # jtfilter = bootstrap_filter()
 
+# jtfilter = jittertemp_filter(n_temp=4, n_jitt = 4, rho= 0.99,
+#                             verbose=verbose, MALA=MALA)
+
+jtfilter = nudging_filter(n_temp=4, n_jitt = 2, rho= 0.99,
+                            verbose=verbose, MALA=MALA)
 # Load data
 u_exact = np.load('u_true_data.npy')
 u_vel = np.load('u_obs_data.npy') 
 
-nensemble = [5,5,5,5]
+nensemble = [1,1,1,1]
 
 
 jtfilter.setup(nensemble, model)

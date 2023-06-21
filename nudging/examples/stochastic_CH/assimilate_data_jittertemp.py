@@ -21,10 +21,10 @@ verbose = False
 # jtfilter = jittertemp_filter(n_temp=4, n_jitt = 4, rho= 0.99,
 #                              verbose=verbose, MALA=MALA)
 
-# jtfilter = bootstrap_filter()
+jtfilter = bootstrap_filter()
 
-jtfilter = nudging_filter(n_temp=4, n_jitt = 4, rho= 0.99,
-                             verbose=verbose, MALA=MALA)
+# jtfilter = nudging_filter(n_temp=4, n_jitt = 4, rho= 0.99,
+#                              verbose=verbose, MALA=MALA)
 
 nensemble = [5,5,5,5]
 jtfilter.setup(nensemble, model)
