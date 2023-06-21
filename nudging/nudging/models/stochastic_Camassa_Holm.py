@@ -74,6 +74,10 @@ class Camsholm(base_model):
         self.dW2 = Function(self.R)
         self.dW3 = Function(self.R)
         self.dW4 = Function(self.R)
+        self.dl1 = Function(self.R)
+        self.dl2 = Function(self.R)
+        self.dl3 = Function(self.R)
+        self.dl4 = Function(self.R)
         self.Ln = self.fx1*self.dW1+self.fx2*self.dW2+self.fx3*self.dW3+self.fx4*self.dW4
         
         self.sqrt_dt = self.dt**0.5
@@ -118,6 +122,10 @@ class Camsholm(base_model):
             self.dW2.assign(self.X[4*step+2])
             self.dW3.assign(self.X[4*step+3])
             self.dW4.assign(self.X[4*step+4])
+            self.dl1.assign(self.X[4*self.nsteps+4*step+1])
+            self.dl2.assign(self.X[4*self.nsteps+4*step+2])
+            self.dl3.assign(self.X[4*self.nsteps+4*step+3])
+            self.dl4.assign(self.X[4*self.nsteps+4*step+4])
 
             self.usolver.solve()
             self.w0.assign(self.w1)
@@ -138,14 +146,20 @@ class Camsholm(base_model):
         Y.interpolate(u)
         return Y
 
-
+    # need to adjust allocation of ensemble with lambda and weight separately
     def allocate(self):
         particle = [Function(self.W)]
         for i in range(self.nsteps):
             for j in range(4):
                 dW = Function(self.R)
                 dW.assign(self.rg.normal(self.R, 0., 1.0))
-                particle.append(dW) 
+                particle.append(dW)
+        for i in range(self.nsteps, 2*self.nsteps):
+            for j in range(4):
+                dlambda = Function(self.R)
+                dlambda.assign(self.rg.normal(self.R, 0., 1.0))
+                particle.append(self.sqrt_dt*dlambda)  
+        print(len(particle))
         return particle 
 
 
@@ -156,8 +170,17 @@ class Camsholm(base_model):
             for j in range(4):
                 count += 1
                 X[count].assign(c1*X[count] + c2*rg.normal(self.R, 0., 1.0))
+                print(count)
                 if g:
                     X[count] += gscale*g[count]
+        count = 0
+        for i in range(self.nsteps, 2*self.nsteps):
+            for j in range(4):
+                count += 1
+                print('lcount', 4*self.nsteps+count)
+                X[4*self.nsteps+count].assign(c1*X[4*self.nsteps+count] + c2*rg.normal(self.R, 0., 1.0))
+                if g:
+                    X[4*self.nsteps+count] += gscale*g[4*self.nsteps+count]
 
 
     def lambda_functional_1(self):
