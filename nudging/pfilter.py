@@ -396,7 +396,7 @@ class nudging_filter(base_filter):
         
         for i in range(N):
             pyadjoint.tape.continue_annotation()
-            self.model.run(self.ensemble[i],self.ensemble[i])
+            self.model.run(self.ensemble[i],self.ensemble[i], Nudge = True)
             Y = self.model.obs()
             # set the control
             self.lmbda = self.model.controls()+ [Control(y)]
@@ -417,8 +417,10 @@ class nudging_filter(base_filter):
             valuebeforemin = self.J_fnhat(self.ensemble[i]+[y])
             #lambda_opt = minimize(self.J_fnhat, options={"disp": True})
             lambda_opt = minimize(self.J_fnhat)
+
+
             # update  lambda_opt in the ensemble members
-            for j in range(4*self.model.nsteps):
+            for j in range(4*self.model.nsteps, 2*4*self.model.nsteps):
                 self.ensemble[i][j].assign(lambda_opt[j])
             valueafteremin = self.J_fnhat(self.ensemble[i]+[y])
             # Add first Girsanov factor 
@@ -428,13 +430,14 @@ class nudging_filter(base_filter):
             self.model.randomize(self.ensemble[i],Constant(0),Constant(1))
 
             # Add second Girsanov factor using lambda_opt and noise
-            self.weight_arr.dlocal[i] += self.model.lambda_functional_2(lambda_opt)
+            self.weight_arr.dlocal[i] += self.model.lambda_functional_2()
 
-            for j in range(4*self.model.nsteps):
+            # Think correct indexing
+            for j in range(2*4*self.model.nsteps):    
                 self.ensemble[i][j].assign(lambda_opt[j])
 
             # run and obs method with updated noise and lambda_opt
-            self.model.run(self.ensemble[i], self.ensemble[i])    
+            self.model.run(self.ensemble[i], self.ensemble[i], Nudge = True)    
             Y = self.model.obs()
             
             # Add liklihood function to calculate the modified weights 
@@ -500,7 +503,7 @@ class nudging_filter(base_filter):
                                              (1-self.rho**2)**0.5)
                     # put result of forward model into new_ensemble
                     self.model.run(self.proposal_ensemble[i],
-                                   self.new_ensemble[i])
+                                   self.new_ensemble[i], Nudge = True)
 
                     # particle weights
                     Y = self.model.obs()
@@ -523,6 +526,6 @@ class nudging_filter(base_filter):
 
         if self.verbose:
             PETSc.Sys.Print("Advancing ensemble")
-        self.model.run(self.ensemble[i], self.ensemble[i])
+        self.model.run(self.ensemble[i], self.ensemble[i], Nudge = False)
         if self.verbose:
             PETSc.Sys.Print("assimilation step complete")
