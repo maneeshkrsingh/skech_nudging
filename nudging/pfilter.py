@@ -83,9 +83,9 @@ class base_filter(object, metaclass=ABCMeta):
             # renormalise
             weights = np.exp(-dtheta*weights)
             weights /= np.sum(weights)
-            PETSc.Sys.Print('W:', weights)
+            #PETSc.Sys.Print('W:', weights)
             self.ess = 1/np.sum(weights**2)
-            PETSc.Sys.Print(self.ess)
+            PETSc.Sys.Print('ESS', self.ess)
 
         # compute resampling protocol on rank 0
         if self.ensemble_rank == 0:
@@ -375,7 +375,6 @@ class nudging_filter(base_filter):
                 ess = 1/np.sum(weights**2)
                 if ess < ess_tol*sum(self.nensemble):
                     dtheta = 0.5*dtheta
-
             # abuse owned array to broadcast dtheta
             for i in range(self.nglobal):
                 self.dtheta_arr[i]=dtheta
@@ -393,61 +392,118 @@ class nudging_filter(base_filter):
         self.ess_temper = []
         self.theta_temper = []
 
-        
         for i in range(N):
-            pyadjoint.tape.continue_annotation()
-            self.model.run(self.ensemble[i],self.ensemble[i], Nudge = True)
-            Y = self.model.obs()
-            # set the control
-            self.lmbda = self.model.controls()+ [Control(y)]
+            if not self.model_taped:
+                self.model_taped = False
+                pyadjoint.tape.continue_annotation()
+                #print('insidenudge')
+                # run and obs the model without noise
+                self.model.run(self.ensemble[i],self.ensemble[i])
+                #print(len(self.ensemble[i]))
+                Y = self.model.obs()
+                # set the control
+                self.lmbda = self.model.controls()+ [Control(y)]
+                #print(len(self.lmbda))    
+                # add the likelihood and Girsanov factor 
+                self.weight_J_fn = assemble(log_likelihood(y,Y))+self.model.lambda_functional_1()
+                lmbda_indices = tuple(i  for i in range(len(self.lmbda)))
+                self.J_fnhat = ReducedFunctional(self.weight_J_fn, self.lmbda, derivative_components= lmbda_indices)
+                pyadjoint.tape.pause_annotation()
 
-            # add the likelihood and Girsanov factor 
-            self.weight_J_fn = assemble(log_likelihood(y,Y))+self.model.lambda_functional_1()
-
-            lmbda_indices = tuple(i  for i in range(len(self.lmbda)))
-            
-            self.J_fnhat = ReducedFunctional(self.weight_J_fn, self.lmbda, derivative_components= lmbda_indices)
-            #self.J_fnhat = ReducedFunctional(self.weight_J_fn, self.lmbda)
-            
-            pyadjoint.tape.pause_annotation()
 
             for j in range(4*self.model.nsteps):
                 self.ensemble[i][j].assign(0)
 
-            valuebeforemin = self.J_fnhat(self.ensemble[i]+[y])
             #lambda_opt = minimize(self.J_fnhat, options={"disp": True})
             lambda_opt = minimize(self.J_fnhat)
-
-
             # update  lambda_opt in the ensemble members
-            for j in range(4*self.model.nsteps, 2*4*self.model.nsteps):
+            for j in range(4*self.model.nsteps):
                 self.ensemble[i][j].assign(lambda_opt[j])
-            valueafteremin = self.J_fnhat(self.ensemble[i]+[y])
+
             # Add first Girsanov factor 
             self.weight_arr.dlocal[i] = self.model.lambda_functional_1()
-
             # radomize ensemble with noise terms
             self.model.randomize(self.ensemble[i],Constant(0),Constant(1))
+            self.weight_arr.dlocal[i] += self.model.lambda_functional_2(lambda_opt)
 
-            # Add second Girsanov factor using lambda_opt and noise
-            self.weight_arr.dlocal[i] += self.model.lambda_functional_2()
-
-            # Think correct indexing
-            for j in range(2*4*self.model.nsteps):    
+            for j in range(4*self.model.nsteps):
                 self.ensemble[i][j].assign(lambda_opt[j])
 
             # run and obs method with updated noise and lambda_opt
-            self.model.run(self.ensemble[i], self.ensemble[i], Nudge = True)    
+            self.model.run(self.ensemble[i], self.ensemble[i])    
             Y = self.model.obs()
-            
-            # Add liklihood function to calculate the modified weights 
             self.weight_arr.dlocal[i] += assemble(log_likelihood(y,Y))
-  
+            #resampling method
+        #self.parallel_resample()
+        
+        # for i in range(N):
+        #     if not self.model_taped:
+        #         self.model_taped = True
+        #         pyadjoint.tape.continue_annotation()
+        #         self.model.run(self.ensemble[i],self.ensemble[i], Nudge = True)
+        #         Y = self.model.obs()
+        #         # set the control
+        #         self.lmbda = self.model.controls()+ [Control(y)]
 
+        #         # add the likelihood and Girsanov factor 
+        #         self.weight_J_fn = assemble(log_likelihood(y,Y))+self.model.lambda_functional_1()
+
+        #         lmbda_indices = tuple(i  for i in range(len(self.lmbda)))
+            
+        #         self.J_fnhat = ReducedFunctional(self.weight_J_fn, self.lmbda, derivative_components= lmbda_indices)
+        #         #self.J_fnhat = ReducedFunctional(self.weight_J_fn, self.lmbda)
+            
+        #         pyadjoint.tape.pause_annotation()
+
+        #     for j in range(4*self.model.nsteps):
+        #         self.ensemble[i][j+1].assign(0)
+
+        #     # valuebeforemin = self.J_fnhat(self.ensemble[i]+[y])
+        #     #lambda_opt = minimize(self.J_fnhat, options={"disp": True})
+        #     lambda_opt = minimize(self.J_fnhat)
+
+        #     #PETSc.Sys.Print(len(self.lmbda))
+        #     # update  lambda_opt in the ensemble members
+        #     for j in range(4*self.model.nsteps+1,2*4*self.model.nsteps+1):
+        #         self.ensemble[i][j].assign(lambda_opt[j])
+        #     # valueafteremin = self.J_fnhat(self.ensemble[i]+[y])
+        #     # Add first Girsanov factor 
+        #     self.weight_arr.dlocal[i] = self.model.lambda_functional_1()
+
+        #     # radomize ensemble with noise terms
+        #     self.model.randomize(self.ensemble[i],Constant(0),Constant(1))
+
+        #     # Add second Girsanov factor using lambda_opt and noise
+        #     self.weight_arr.dlocal[i] += self.model.lambda_functional_2()
+
+        #     # Think correct indexing
+        #     # for j in range(len(self.lmbda)-1):    
+        #     #     self.ensemble[i][j].assign(lambda_opt[j])
+
+        #     # run and obs method with updated noise and lambda_opt
+        #     self.model.run(self.ensemble[i], self.new_ensemble[i], Nudge = True)    
+        #     Y = self.model.obs()
+            
+        #     # Add liklihood function to calculate the modified weights 
+        #     self.weight_arr.dlocal[i] += assemble(log_likelihood(y,Y))
+  
+        # self.parallel_resample()
         # tempering with jittering
-        theta = .0
+        theta = 0.
         while theta <1.: #  Tempering loop
             dtheta = 1.0 - theta
+
+            self.weight_arr.dlocal[i] = self.model.lambda_functional_1()
+
+
+            self.weight_arr.dlocal[i] += self.model.lambda_functional_2(lambda_opt)
+
+            self.model.run(self.ensemble[i], self.new_ensemble[i])    
+            Y = self.model.obs()
+        
+            self.weight_arr.dlocal[i] += assemble(log_likelihood(y,Y))
+
+
             # adaptive dtheta choice
             dtheta = self.adaptive_dtheta(dtheta, theta,  ess_tol)
             theta += dtheta
@@ -503,11 +559,12 @@ class nudging_filter(base_filter):
                                              (1-self.rho**2)**0.5)
                     # put result of forward model into new_ensemble
                     self.model.run(self.proposal_ensemble[i],
-                                   self.new_ensemble[i], Nudge = True)
+                                   self.new_ensemble[i])
 
                     # particle weights
                     Y = self.model.obs()
-                    new_weights[i] = exp(-theta*assemble(log_likelihood(y,Y)))
+                    girsanov_weight = self.model.lambda_functional_1()+self.model.lambda_functional_2(lambda_opt)
+                    new_weights[i] = exp(-theta*(assemble(log_likelihood(y,Y))+girsanov_weight))
                     #accept reject of MALA and Jittering 
                     if l == 0:
                         weights[i] = new_weights[i]
@@ -520,12 +577,13 @@ class nudging_filter(base_filter):
                         # accept or reject tool
                         u = self.model.rg.uniform(self.model.R, 0., 1.0)
                         if u.dat.data[:] < p_accept:
+                            #print(p_accept)
                             weights[i] = new_weights[i]
                             self.model.copy(self.proposal_ensemble[i],
                                             self.ensemble[i])
 
         if self.verbose:
             PETSc.Sys.Print("Advancing ensemble")
-        self.model.run(self.ensemble[i], self.ensemble[i], Nudge = False)
+        self.model.run(self.ensemble[i], self.ensemble[i])
         if self.verbose:
             PETSc.Sys.Print("assimilation step complete")
