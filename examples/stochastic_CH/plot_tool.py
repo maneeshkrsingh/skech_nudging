@@ -20,15 +20,18 @@ y_e_tr_obs = np.transpose(y_e, (1,0,2))# use while plotiing against N_obs
 y_e_trans_spatial = np.transpose(y_e, (1,2,0)) # use while plotiing against X
 
 
+y_exct_alltime = np.load('y_true_alltime.npy') 
 
+y_exct_obs_alltime = np.load('y_obs_alltime.npy') 
 
+# print(y_exct_obs_alltime)
 
-
-xi =39
+xi =7
 y_e_mean_obs = np.mean(y_e_tr_obs[:,:,xi], axis=1)
 
 plt.plot(y_alltime[:,:,xi], 'g-')
-#plt.plot(y_exct[:,xi], 'r-')
+plt.plot(y_exct_alltime[:,xi], 'r-')
+# plt.plot(y_exct_obs_alltime[:,xi], '-o')
 plt.show()
         
 
