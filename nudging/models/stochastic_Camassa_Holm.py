@@ -120,33 +120,11 @@ class Camsholm(base_model):
             self.X[i].assign(X0[i])
         self.w0.assign(self.X[0])
         self.msolve.solve()
-        # for step in range(self.nsteps):
-        #     if Nudge:
-        #         self.dW1.assign(self.X[4*step+1])
-        #         self.dW2.assign(self.X[4*step+2])
-        #         self.dW3.assign(self.X[4*step+3])
-        #         self.dW4.assign(self.X[4*step+4])
-        #         self.dl1.assign(self.X[4*self.nsteps+4*step+1])
-        #         self.dl2.assign(self.X[4*self.nsteps+4*step+2])
-        #         self.dl3.assign(self.X[4*self.nsteps+4*step+3])
-        #         self.dl4.assign(self.X[4*self.nsteps+4*step+4])
-        #     else:
-        #         self.dW1.assign(self.X[4*step+1])
-        #         self.dW2.assign(self.X[4*step+2])
-        #         self.dW3.assign(self.X[4*step+3])
-        #         self.dW4.assign(self.X[4*step+4])
-        #         self.dl1.assign(0)
-        #         self.dl2.assign(0)
-        #         self.dl3.assign(0)
-        #         self.dl4.assign(0)
         for step in range(self.nsteps):
-            #Fixing sqrt(dt) term
             self.dW1.assign(self.X[4*step+1])
             self.dW2.assign(self.X[4*step+2])
             self.dW3.assign(self.X[4*step+3])
-            self.dW4.assign(self.X[4*step+4])
-            self.usolver.solve()
-            self.w0.assign(self.w1)        
+            self.dW4.assign(self.X[4*step+4])      
             
 
             self.usolver.solve()
@@ -176,7 +154,7 @@ class Camsholm(base_model):
             for j in range(4):
                 count +=1 
                 dW = Function(self.R)
-                #dW.assign(self.rg.normal(self.R, 0., 1.0))
+                #dW.assign(self.rg.normal(self.R, 0., 10.0))
                 particle.append(dW) 
         #print(len(particle))
         return particle 
@@ -189,7 +167,7 @@ class Camsholm(base_model):
             for j in range(4):
                 count += 1
                 #print(count)
-                X[count].assign(c1*X[count] + c2*rg.normal(self.R, 0., 1.0))    
+                X[count].assign(c1*X[count] + c2*rg.normal(self.R, 0., 2.0))    
                 if g:
                     X[count] += gscale*g[count]
 
