@@ -399,7 +399,7 @@ class nudging_filter(base_filter):
                 pyadjoint.tape.continue_annotation()
                 #print('insidenudge')
                 # run and obs the model without noise
-                self.model.run(self.ensemble[i],self.ensemble[i])
+                self.model.run(self.ensemble[i],self.new_ensemble[i])
                 #print(len(self.ensemble[i]))
                 Y = self.model.obs()
                 # set the control
@@ -411,6 +411,7 @@ class nudging_filter(base_filter):
                 self.J_fnhat = ReducedFunctional(self.weight_J_fn, self.lmbda, derivative_components= lmbda_indices)
                 pyadjoint.tape.pause_annotation()
 
+            print('After', self.ensemble_rank, norm(self.ensemble[i])) 
 
             for j in range(4*self.model.nsteps):
                 self.ensemble[i][j].assign(0)
@@ -436,7 +437,8 @@ class nudging_filter(base_filter):
                 self.ensemble[i][j].assign(lambda_opt[j])
 
             # run and obs method with updated noise and lambda_opt
-            self.model.run(self.ensemble[i], self.ensemble[i])    
+            self.model.run(self.ensemble[i], self.new_ensemble[i])   
+            print('After', self.ensemble_rank, norm(self.new_ensemble[i])) 
             Y = self.model.obs()
             self.weight_arr.dlocal[i] += assemble(log_likelihood(y,Y))
             #resampling method
