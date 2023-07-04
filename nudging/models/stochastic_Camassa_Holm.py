@@ -16,7 +16,7 @@ class Camsholm(base_model):
         self.xpoints = xpoints
 
     def setup(self, comm = MPI.COMM_WORLD):
-        self.mesh = PeriodicIntervalMesh(self.n, 40.0, comm = comm) # mesh need to be setup in parallel, width =4 and cell = self.n
+        self.mesh = PeriodicIntervalMesh(self.n, 40.0, comm = comm) # mesh need to be setup in parallel
         self.x, = SpatialCoordinate(self.mesh)
 
         #FE spaces
@@ -25,23 +25,17 @@ class Camsholm(base_model):
         self.w0 = Function(self.W)
         self.m0, self.u0 = self.w0.split()       
 
-        #Interpolate the initial condition
-
-        #Solve for the initial condition for m.
-
-        alphasq = self.alpha**2
         self.p = TestFunction(self.V)
         self.m = TrialFunction(self.V)
         
         self.am = self.p*self.m*dx
-        self.Lm = (self.p*self.u0 + alphasq*self.p.dx(0)*self.u0.dx(0))*dx
+        self.Lm = (self.p*self.u0 + self.alpha**2*self.p.dx(0)*self.u0.dx(0))*dx
+        #Solve for the initial condition for m
         mprob = LinearVariationalProblem(self.am, self.Lm, self.m0)
         solver_parameters={'ksp_type': 'preonly', 'pc_type': 'lu'}
-        self.msolve = LinearVariationalSolver(mprob,
-                                              solver_parameters=solver_parameters)
+        self.msolve = LinearVariationalSolver(mprob, solver_parameters=solver_parameters)
         
         #Build the weak form of the timestepping algorithm. 
-
         self.p, self.q = TestFunctions(self.W)
 
         self.w1 = Function(self.W)
@@ -49,7 +43,7 @@ class Camsholm(base_model):
         self.m1, self.u1 = split(self.w1)   # for n+1 the  time
         self.m0, self.u0 = split(self.w0)   # for n th time 
         
-        #Adding extra term included random number
+        #Adding modulated amplitudes
         fx1 = Function(self.V)
         fx2 = Function(self.V)
         fx3 = Function(self.V)
@@ -62,12 +56,6 @@ class Camsholm(base_model):
 
         # with added term
         self.R = FunctionSpace(self.mesh, "R", 0)
-        # self.dW = []
-        # for i in range(self.nsteps):
-        #     subdW = []
-        #     for j in range(4):
-        #         subdW.append(Function(self.R))
-        #     self.dW.append(subdW)
 
         self.sqrt_dt = self.dt**0.5
         # noise term
@@ -75,27 +63,16 @@ class Camsholm(base_model):
         self.dW2 = Function(self.R)
         self.dW3 = Function(self.R)
         self.dW4 = Function(self.R)
-        # lambdas for Nudging factor
-        # self.dl1 = Function(self.R)
-        # self.dl2 = Function(self.R)
-        # self.dl3 = Function(self.R)
-        # self.dl4 = Function(self.R)
-
         Ln = fx1*self.dW1+fx2*self.dW2+fx3*self.dW3+fx4*self.dW4
-        # Ln_lambda = self.sqrt_dt*(fx1*self.dl1+fx2*self.dl2+fx3*self.dl3+fx4*self.dl4)
 
-        
         # finite element linear functional 
         self.mh = 0.5*(self.m1 + self.m0)
         self.uh = 0.5*(self.u1 + self.u0)
         self.v = self.uh*self.dt+Ln*self.sqrt_dt
 
-        self.L = ((self.q*self.u1 + alphasq*self.q.dx(0)*self.u1.dx(0) - self.q*self.m1)*dx +(self.p*(self.m1-self.m0) + (self.p*self.v.dx(0)*self.mh -self.p.dx(0)*self.v*self.mh))*dx)
+        self.L = ((self.q*self.u1 + self.alpha**2*self.q.dx(0)*self.u1.dx(0) - self.q*self.m1)*dx +(self.p*(self.m1-self.m0) + (self.p*self.v.dx(0)*self.mh -self.p.dx(0)*self.v*self.mh))*dx)
 
-        #def Linearfunc
-
-        # solver
-
+        #solver
         self.uprob = NonlinearVariationalProblem(self.L, self.w1)
         self.usolver = NonlinearVariationalSolver(self.uprob, solver_parameters={'mat_type': 'aij', 'ksp_type': 'preonly','pc_type': 'lu'})
 
@@ -107,7 +84,6 @@ class Camsholm(base_model):
         self.X = self.allocate()
 
         # vertex only mesh for observations
-        
         x_obs = np.arange(0.5,self.xpoints)
         x_obs_list = []
         for i in x_obs:
@@ -126,13 +102,12 @@ class Camsholm(base_model):
             self.dW3.assign(self.X[4*step+3])
             self.dW4.assign(self.X[4*step+4])      
             
-
             self.usolver.solve()
             self.w0.assign(self.w1)
+
             if operation:
                operation(self.w0)
-        X1[0].assign(self.w0) # save sol at the nstep th time 
-        
+        X1[0].assign(self.w0) 
         
     def controls(self):
         controls_list = []
@@ -146,7 +121,6 @@ class Camsholm(base_model):
         Y.interpolate(u)
         return Y
 
-    # need to adjust allocation of ensemble with lambda and weight separately
     def allocate(self):
         count = 0
         particle = [Function(self.W)]
@@ -154,11 +128,8 @@ class Camsholm(base_model):
             for j in range(4):
                 count +=1 
                 dW = Function(self.R)
-                #dW.assign(self.rg.normal(self.R, 0., 10.0))
                 particle.append(dW) 
-        #print(len(particle))
         return particle 
-
 
     def randomize(self, X, c1=0, c2=1, gscale=None, g=None):
         rg = self.rg
@@ -166,7 +137,6 @@ class Camsholm(base_model):
         for i in range(self.nsteps):
             for j in range(4):
                 count += 1
-                #print(count)
                 X[count].assign(c1*X[count] + c2*rg.normal(self.R, 0., 2.0))    
                 if g:
                     X[count] += gscale*g[count]
@@ -200,38 +170,3 @@ class Camsholm(base_model):
             else:
                 lambda_func -= (dW1*dl1+dW2*dl2+dW3*dl3+dW4*dl4)*dx # sort out dt
         return assemble(lambda_func)/40
-
-    # def lambda_functional_1(self):
-    #     for step in range(self.nsteps):
-
-    #         dl1 = self.X[4*self.nsteps+4*step+1]
-    #         dl2 = self.X[4*self.nsteps+4*step+2]
-    #         dl3 = self.X[4*self.nsteps+4*step+3]
-    #         dl4 = self.X[4*self.nsteps+4*step+4]
-
-    #         if step == 0:
-    #            lambda_func = 0.5*self.dt*(dl1**2+dl2**2+dl3**2+dl4**2)*dx
-    #         else:
-    #             lambda_func += 0.5*self.dt*(dl1**2+dl2**2+dl3**2+dl4**2)*dx
-    #     return assemble(lambda_func)/40
-    
-
-    # def lambda_functional_2(self):
-    #     for step in range(self.nsteps):
-
-    #         dW1 = self.X[4*step+1]
-    #         dW2 = self.X[4*step+2]
-    #         dW3 = self.X[4*step+3]
-    #         dW4 = self.X[4*step+4]
-
-    #         dl1 = self.X[4*self.nsteps+4*step+1]
-    #         dl2 = self.X[4*self.nsteps+4*step+2]
-    #         dl3 = self.X[4*self.nsteps+4*step+3]
-    #         dl4 = self.X[4*self.nsteps+4*step+4]
-
-    #         if step == 0:
-    #            lambda_func = -self.sqrt_dt*(dW1*dl1+dW2*dl2+dW3*dl3+dW4*dl4)*dx # sort out dt
-    #         else:
-    #             lambda_func -= self.sqrt_dt*(dW1*dl1+dW2*dl2+dW3*dl3+dW4*dl4)*dx # sort out dt
-
-    #     return assemble(lambda_func)/40

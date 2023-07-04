@@ -82,6 +82,7 @@ class base_filter(object, metaclass=ABCMeta):
             weights = self.weight_arr.data()
             # renormalise
             weights = np.exp(-dtheta*weights)
+            #PETSc.Sys.Print('weights ', weights )
             weights /= np.sum(weights)
             #PETSc.Sys.Print('W:', weights)
             self.ess = 1/np.sum(weights**2)
@@ -97,7 +98,7 @@ class base_filter(object, metaclass=ABCMeta):
         self.s_arr.synchronise()
         s_copy = self.s_arr.data()
         self.s_copy = s_copy
-        # print('s list', self.s_copy)
+        #print('s list', self.s_copy)
 
         mpi_requests = []
         
@@ -416,10 +417,15 @@ class nudging_filter(base_filter):
 
             #lambda_opt = minimize(self.J_fnhat, options={"disp": True})
             lambda_opt = minimize(self.J_fnhat)
+
+            valuebeforemin = self.J_fnhat(self.ensemble[i]+[y])
             # update  lambda_opt in the ensemble members
             for j in range(4*self.model.nsteps):
                 self.ensemble[i][j].assign(lambda_opt[j])
 
+            valueafteremin = self.J_fnhat(self.ensemble[i]+[y])
+
+            #print(i, valuebeforemin, valueafteremin, 'ensemblemember', 'before', 'after')
             # Add first Girsanov factor 
             self.weight_arr.dlocal[i] = self.model.lambda_functional_1()
             # radomize ensemble with noise terms
